@@ -6,7 +6,7 @@
 /*   By: mucelep <mucelep@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 23:12:44 by mucelep           #+#    #+#             */
-/*   Updated: 2026/02/16 04:48:00 by mucelep          ###   ########.fr       */
+/*   Updated: 2026/02/17 16:16:15 by mucelep          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -102,7 +102,11 @@ char	*get_next_line(int fd)
 	char		*line;
 
 	if (fd < 0 || BUFFER_SIZE <= 0)
+	{
+		free(stash);
+		stash = NULL;
 		return (NULL);
+	}
 	stash = readfd(fd, stash);
 	if (!stash || !*stash)
 	{
