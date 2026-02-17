@@ -6,7 +6,7 @@
 /*   By: mucelep <mucelep@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 23:16:41 by mucelep           #+#    #+#             */
-/*   Updated: 2026/02/17 16:24:25 by mucelep          ###   ########.fr       */
+/*   Updated: 2026/02/17 16:48:31 by mucelep          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -96,13 +96,31 @@ static char	*readfd(int fd, char *stash)
 	return (stash);
 }
 
+static char	*freeallstash(char **stash)
+{
+	int	i;
+
+	i = 0;
+	while (i < OPEN_MAX)
+	{
+		free(stash[i]);
+		stash[i] = NULL;
+		i++;
+	}
+	return (NULL);
+}
+
 char	*get_next_line_bonus(int fd)
 {
 	static char	*stash[OPEN_MAX];
 	char		*line;
 
-	if (fd < 0 || BUFFER_SIZE <= 0)
+	if (BUFFER_SIZE <= 0)
 		return (NULL);
+	if (fd < 0 || fd > OPEN_MAX)
+		return (NULL);
+	if (fd == OPEN_MAX)
+		return (freeallstash(stash));
 	stash[fd] = readfd(fd, stash[fd]);
 	if (!stash[fd] || !*stash[fd])
 	{
