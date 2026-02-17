@@ -6,7 +6,7 @@
 /*   By: mucelep <mucelep@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 23:16:50 by mucelep           #+#    #+#             */
-/*   Updated: 2026/02/16 04:47:56 by mucelep          ###   ########.fr       */
+/*   Updated: 2026/02/17 05:44:47 by mucelep          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -20,8 +20,8 @@
 #  define BUFFER_SIZE 42
 # endif
 
-#ifndef OPEN_MAX
-# define OPEN_MAX 1024
+# ifndef OPEN_MAX
+#  define OPEN_MAX 1024
 # endif
 
 char	*ftb_substr(const char *s, unsigned int start, size_t len);
