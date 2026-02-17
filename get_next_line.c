@@ -6,7 +6,7 @@
 /*   By: mucelep <mucelep@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 23:12:44 by mucelep           #+#    #+#             */
-/*   Updated: 2026/02/17 16:16:15 by mucelep          ###   ########.fr       */
+/*   Updated: 2026/02/17 20:05:18 by mucelep          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,19 +70,20 @@ static char	*updatestash(char *stash)
 
 static char	*readfd(int fd, char *stash)
 {
-	char	buffer[BUFFER_SIZE + 1];
+	char	*buffer;
 	char	*stashtmp;
 	int		bytes;
 
-	if (!stash)
-		stash = ft_strdup("");
+	buffer = malloc(BUFFER_SIZE + 1);
+	if (!buffer)
+		return (NULL);
 	while (!ft_strchr(stash, '\n'))
 	{
 		bytes = read(fd, buffer, BUFFER_SIZE);
 		if (bytes < 0)
 		{
 			free(stash);
-			return (NULL);
+			return (free(buffer), NULL);
 		}
 		if (bytes == 0)
 			break ;
@@ -91,9 +92,9 @@ static char	*readfd(int fd, char *stash)
 		free(stash);
 		stash = stashtmp;
 		if (!stash)
-			return (NULL);
+			return (free(buffer), NULL);
 	}
-	return (stash);
+	return (free(buffer), stash);
 }
 
 char	*get_next_line(int fd)
@@ -107,6 +108,8 @@ char	*get_next_line(int fd)
 		stash = NULL;
 		return (NULL);
 	}
+	if (!stash)
+		stash = ft_strdup("");
 	stash = readfd(fd, stash);
 	if (!stash || !*stash)
 	{

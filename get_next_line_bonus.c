@@ -6,7 +6,7 @@
 /*   By: mucelep <mucelep@student.42istanbul.com    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2026/02/15 23:16:41 by mucelep           #+#    #+#             */
-/*   Updated: 2026/02/17 16:48:31 by mucelep          ###   ########.fr       */
+/*   Updated: 2026/02/17 20:26:15 by mucelep          ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -70,19 +70,20 @@ static char	*updatestash(char *stash)
 
 static char	*readfd(int fd, char *stash)
 {
-	char	buffer[BUFFER_SIZE + 1];
+	char	*buffer;
 	char	*stashtmp;
 	int		bytes;
 
-	if (!stash)
-		stash = ftb_strdup("");
+	buffer = malloc(BUFFER_SIZE + 1);
+	if (!buffer)
+		return (NULL);
 	while (!ftb_strchr(stash, '\n'))
 	{
 		bytes = read(fd, buffer, BUFFER_SIZE);
 		if (bytes < 0)
 		{
 			free(stash);
-			return (NULL);
+			return (free(buffer), NULL);
 		}
 		if (bytes == 0)
 			break ;
@@ -91,9 +92,9 @@ static char	*readfd(int fd, char *stash)
 		free(stash);
 		stash = stashtmp;
 		if (!stash)
-			return (NULL);
+			return (free(buffer), NULL);
 	}
-	return (stash);
+	return (free(buffer), stash);
 }
 
 static char	*freeallstash(char **stash)
@@ -117,10 +118,12 @@ char	*get_next_line_bonus(int fd)
 
 	if (BUFFER_SIZE <= 0)
 		return (NULL);
-	if (fd < 0 || fd > OPEN_MAX)
-		return (NULL);
-	if (fd == OPEN_MAX)
+	if (fd == -2)
 		return (freeallstash(stash));
+	if (fd < 0 || fd >= OPEN_MAX)
+		return (NULL);
+	if (!stash[fd])
+		stash[fd] = ftb_strdup("");
 	stash[fd] = readfd(fd, stash[fd]);
 	if (!stash[fd] || !*stash[fd])
 	{

@@ -28,7 +28,7 @@ char *get_next_line(int fd);
 cc -Wall -Wextra -Werror -D BUFFER_SIZE=42 get_next_line.c get_next_line_utils.c
 ```
 
-This will generate the executable with a buffer size of 42. The `BUFFER_SIZE` can be changed to any value:
+The `BUFFER_SIZE` can be changed to any value:
 ```bash
 cc -Wall -Wextra -Werror -D BUFFER_SIZE=1 get_next_line.c get_next_line_utils.c
 cc -Wall -Wextra -Werror -D BUFFER_SIZE=9999 get_next_line.c get_next_line_utils.c
@@ -83,6 +83,54 @@ cc -Wall -Wextra -Werror -D BUFFER_SIZE=42 main.c get_next_line.c get_next_line_
 ./a.out
 ```
 
+### Memory Cleanup
+
+#### Mandatory - Single line read
+
+If you only want to read one line and free the remaining data in the stash, send `-1` as the file descriptor:
+```c
+int main(void)
+{
+    int     fd;
+    char    *line;
+
+    fd = open("file.txt", O_RDONLY);
+
+    line = get_next_line(fd);   // read only first line
+    printf("%s", line);
+    free(line);
+
+    get_next_line(-1);          // send -1 to free remaining stash
+    close(fd);
+    return (0);
+}
+```
+
+> ⚠️ **Note:** If you read all lines with a loop, the stash is automatically freed. The `-1` signal is only needed when you stop reading early.
+
+#### Bonus - Single line read
+
+In the bonus version, send `-2` as the file descriptor to free all stashes:
+```c
+int main(void)
+{
+    int     fd;
+    char    *line;
+
+    fd = open("file.txt", O_RDONLY);
+
+    line = get_next_line_bonus(fd);   // read only first line
+    printf("%s", line);
+    free(line);
+
+    get_next_line_bonus(-2);          // send -2 to free all stashes
+    close(fd);
+    return (0);
+}
+```
+
+> ⚠️ **Note:** `-1` is not used in bonus because `open()` returns `-1` on error. `-2` is used as the cleanup signal since it can never be a valid file descriptor naturally.
+
 ### Bonus Usage Example
 ```c
 #include "get_next_line_bonus.h"
@@ -100,11 +148,12 @@ int main(void)
     fd2 = open("file2.txt", O_RDONLY);
     fd3 = open("file3.txt", O_RDONLY);
 
-    line = get_next_line(fd1); printf("fd1: %s", line); free(line);
-    line = get_next_line(fd2); printf("fd2: %s", line); free(line);
-    line = get_next_line(fd3); printf("fd3: %s", line); free(line);
-    line = get_next_line(fd1); printf("fd1: %s", line); free(line);
+    line = get_next_line_bonus(fd1); printf("fd1: %s", line); free(line);
+    line = get_next_line_bonus(fd2); printf("fd2: %s", line); free(line);
+    line = get_next_line_bonus(fd3); printf("fd3: %s", line); free(line);
+    line = get_next_line_bonus(fd1); printf("fd1: %s", line); free(line);
 
+    get_next_line_bonus(-2);    // free all stashes when done
     close(fd1);
     close(fd2);
     close(fd3);
@@ -149,19 +198,18 @@ The bonus part manages multiple file descriptors simultaneously using a **single
 > 🔎 **Bonus approach:**
 > - Static variable becomes an array indexed by file descriptor: `char *stash[OPEN_MAX]`
 > - Each fd has its own independent reading state
-> - Calling `get_next_line(3)`, then `get_next_line(4)`, then `get_next_line(3)` works correctly without losing track
-```c
-// Conceptual example of bonus static variable
-static char *stash[OPEN_MAX];
+> - Calling `get_next_line_bonus(3)`, then `get_next_line_bonus(4)`, then `get_next_line_bonus(3)` works correctly without losing track
 
-// stash[fd] stores the leftover for each file descriptor independently
-```
+### Cleanup Signals
 
-**Why an array?**
-- Each file descriptor index maps directly to its own buffer
-- Simple and efficient lookup
-- No data structure overhead
-- Only one static variable used (as required by bonus)
+| Version | Signal | Effect |
+|---------|--------|--------|
+| Mandatory | `-1` | Frees the single stash |
+| Bonus | `-2` | Frees all stashes in the array |
+
+**Why different signals?**
+- `-1` is reserved in mandatory as it triggers the cleanup and is never a valid fd
+- In bonus, `-1` could conflict with `open()` error return value conceptually, so `-2` is used as it can **never** be a valid file descriptor naturally
 
 ### Design Choices
 
@@ -169,6 +217,7 @@ static char *stash[OPEN_MAX];
 - Read as little as possible each call (efficient)
 - Never reads the whole file at once
 - Handles any `BUFFER_SIZE` value (1, 42, 9999, 10000000)
+- Buffer allocated on heap (not stack) to prevent stack overflow with large `BUFFER_SIZE`
 - Clean memory management (no leaks)
 - No forbidden functions (`lseek`, global variables, `libft`)
 
@@ -235,7 +284,7 @@ char *get_next_line(int fd);
 cc -Wall -Wextra -Werror -D BUFFER_SIZE=42 get_next_line.c get_next_line_utils.c
 ```
 
-Bu komut buffer boyutu 42 olacak şekilde derler. `BUFFER_SIZE` herhangi bir değere ayarlanabilir:
+`BUFFER_SIZE` herhangi bir değere ayarlanabilir:
 ```bash
 cc -Wall -Wextra -Werror -D BUFFER_SIZE=1 get_next_line.c get_next_line_utils.c
 cc -Wall -Wextra -Werror -D BUFFER_SIZE=9999 get_next_line.c get_next_line_utils.c
@@ -290,6 +339,54 @@ cc -Wall -Wextra -Werror -D BUFFER_SIZE=42 main.c get_next_line.c get_next_line_
 ./a.out
 ```
 
+### Bellek Temizleme
+
+#### Mandatory - Tek satır okuma
+
+Sadece bir satır okuyup kalan veriyi temizlemek istiyorsanız, `-1` gönderin:
+```c
+int main(void)
+{
+    int     fd;
+    char    *line;
+
+    fd = open("dosya.txt", O_RDONLY);
+
+    line = get_next_line(fd);   // sadece ilk satırı oku
+    printf("%s", line);
+    free(line);
+
+    get_next_line(-1);          // kalan stash'i temizlemek için -1 gönder
+    close(fd);
+    return (0);
+}
+```
+
+> ⚠️ **Not:** Tüm satırları döngüyle okursanız stash otomatik temizlenir. `-1` sinyali yalnızca okumayı erken bıraktığınızda gereklidir.
+
+#### Bonus - Tek satır okuma
+
+Bonus versiyonunda tüm stash'leri temizlemek için `-2` gönderin:
+```c
+int main(void)
+{
+    int     fd;
+    char    *line;
+
+    fd = open("dosya.txt", O_RDONLY);
+
+    line = get_next_line_bonus(fd);   // sadece ilk satırı oku
+    printf("%s", line);
+    free(line);
+
+    get_next_line_bonus(-2);          // tüm stash'leri temizlemek için -2 gönder
+    close(fd);
+    return (0);
+}
+```
+
+> ⚠️ **Not:** Bonus'ta `-1` kullanılmaz çünkü `open()` hata durumunda `-1` döndürür. `-2` doğal yolda hiçbir zaman geçerli bir fd olamaz.
+
 ### Bonus Kullanım Örneği
 ```c
 #include "get_next_line_bonus.h"
@@ -307,11 +404,12 @@ int main(void)
     fd2 = open("dosya2.txt", O_RDONLY);
     fd3 = open("dosya3.txt", O_RDONLY);
 
-    line = get_next_line(fd1); printf("fd1: %s", line); free(line);
-    line = get_next_line(fd2); printf("fd2: %s", line); free(line);
-    line = get_next_line(fd3); printf("fd3: %s", line); free(line);
-    line = get_next_line(fd1); printf("fd1: %s", line); free(line);
+    line = get_next_line_bonus(fd1); printf("fd1: %s", line); free(line);
+    line = get_next_line_bonus(fd2); printf("fd2: %s", line); free(line);
+    line = get_next_line_bonus(fd3); printf("fd3: %s", line); free(line);
+    line = get_next_line_bonus(fd1); printf("fd1: %s", line); free(line);
 
+    get_next_line_bonus(-2);    // bitince tüm stash'leri temizle
     close(fd1);
     close(fd2);
     close(fd3);
@@ -342,7 +440,7 @@ Bu projenin temel kavramı, fonksiyon çağrıları arasında okunmamış veriyi
 
 > 🔎 **Temel iş akışı:**
 > 1. `read()` ile dosya tanımlayıcısından `BUFFER_SIZE` boyutunda parçalar oku
-> 2. Okunan içeriği static değişkene (önceki çağrıdan kalan) ekle
+> 2. Okunan içeriği static değişkene ekle
 > 3. Biriktirilen buffer'da `\n` karakterini ara
 > 4. Bulunursa, `\n` dahil her şeyi döndür, geri kalanı static değişkende tut
 > 5. Bulunmazsa, `\n` veya dosya sonu gelene kadar okumaya devam et
@@ -354,21 +452,20 @@ Bu projenin temel kavramı, fonksiyon çağrıları arasında okunmamış veriyi
 Bonus kısım, **tek bir static değişken** kullanarak birden fazla dosya tanımlayıcısını aynı anda yönetir.
 
 > 🔎 **Bonus yaklaşımı:**
-> - Static değişken, dosya tanımlayıcısına göre indekslenen bir diziye dönüşür: `char *stash[OPEN_MAX]`
+> - Static değişken dizi olur: `char *stash[OPEN_MAX]`
 > - Her fd'nin bağımsız okuma durumu vardır
-> - `get_next_line(3)`, ardından `get_next_line(4)`, ardından `get_next_line(3)` çağırmak takibi kaybetmeden doğru çalışır
-```c
-// Bonus static değişkenin kavramsal örneği
-static char *stash[OPEN_MAX];
+> - Farklı fd'ler arasında geçiş yapılabilir
 
-// stash[fd] her dosya tanımlayıcısı için kalan buffer'ı bağımsız olarak saklar
-```
+### Temizleme Sinyalleri
 
-**Neden dizi?**
-- Her dosya tanımlayıcısı indeksi doğrudan kendi buffer'ına karşılık gelir
-- Basit ve verimli erişim
-- Veri yapısı yükü yok
-- Yalnızca bir static değişken kullanılır (bonus gereksinimlerine uygun)
+| Versiyon | Sinyal | Etki |
+|----------|--------|------|
+| Mandatory | `-1` | Tek stash'i temizler |
+| Bonus | `-2` | Tüm stash dizisini temizler |
+
+**Neden farklı sinyaller?**
+- Mandatory'de `-1` geçerli bir fd olamaz, güvenli temizleme sinyali
+- Bonus'ta `-2` kullanılır çünkü `open()` hata durumunda `-1` döndürür, karışıklık olmaması için `-2` tercih edilir
 
 ### Tasarım Seçimleri
 
@@ -376,6 +473,7 @@ static char *stash[OPEN_MAX];
 - Her çağrıda mümkün olduğunca az okur (verimli)
 - Dosyanın tamamını bir anda okumaz
 - Her `BUFFER_SIZE` değerini işler (1, 42, 9999, 10000000)
+- Buffer heap'te tutulur (stack overflow önlenir)
 - Temiz bellek yönetimi (sızıntı yok)
 - Yasak fonksiyon yok (`lseek`, global değişkenler, `libft`)
 
